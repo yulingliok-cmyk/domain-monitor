@@ -1,0 +1,27 @@
+.github/workflows/check-domain.yml
+name: Domain Monitor
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 每天北京时间上午10点执行
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run domain check
+        env:
+          QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
+          QQ_SMTP_AUTHCODE: ${{ secrets.QQ_SMTP_AUTHCODE }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y whois
+          python check_domain.py
