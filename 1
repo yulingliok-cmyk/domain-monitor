@@ -1,0 +1,50 @@
+check_domain.py
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+import subprocess
+import os
+
+DOMAIN = "studiovoid.design"
+
+SMTP_SERVER = "smtp.qq.com"
+SMTP_PORT = 465
+SENDER_EMAIL = os.getenv("QQ_EMAIL")
+SENDER_PASS = os.getenv("QQ_SMTP_AUTHCODE")
+RECEIVER_EMAIL = os.getenv("QQ_EMAIL")
+
+def get_domain_status(domain):
+    """使用系统 whois 命令查询域名状态"""
+    try:
+        result = subprocess.run(["whois", domain], stdout=subprocess.PIPE, text=True, timeout=20)
+        output = result.stdout.lower()
+        if any(word in output for word in ["no match", "not found", "available", "status: free"]):
+            return "available"
+        elif "redemption" in output or "pending" in output:
+            return "redemption"
+        else:
+            return "registered"
+    except Exception as e:
+        print(f"WHOIS 查询错误: {e}")
+        return "error"
+
+def send_email(subject, content):
+    """发送邮件"""
+    msg = MIMEText(content, 'plain', 'utf-8')
+    msg['From'] = Header("Domain Monitor", 'utf-8')
+    msg['To'] = Header(RECEIVER_EMAIL, 'utf-8')
+    msg['Subject'] = Header(subject, 'utf-8')
+
+    with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+        server.login(SENDER_EMAIL, SENDER_PASS)
+        server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], msg.as_string())
+
+if __name__ == "__main__":
+    status = get_domain_status(DOMAIN)
+    print(f"当前域名状态: {status}")
+
+    if status == "available":
+        send_email(
+            subject=f"域名 {DOMAIN} 已可注册！",
+            content=f"好消息！域名 {DOMAIN} 现在可以重新注册啦，请尽快前往注册平台购买。"
+        )
